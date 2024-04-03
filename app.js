@@ -20,6 +20,15 @@ const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 app.use(express.json());
 
+const cors = require('cors');
+
+const corsOptions = {
+    origin: "http://localhost:5173",
+    method: "GET, POST, PUT, DELETE, PATCH, HEAD",
+    credentials: true,
+}
+app.use(cors(corsOptions));
+
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -145,12 +154,27 @@ app.post('/signinrequest', async function (req, res) {
 const followController = require('./followController');
 app.post('/follow/:id', authenticate, followController.followUser);
 app.post('/unfollow/:id', authenticate, followController.unfollowUser);
-  
+app.get('/updateUser', authenticate, async function(req, res) {
+    let user = req.rootUser;
+    user.city = '';
+    user.zip = '';
+    user.website = '';
+    user.location = '';
+    user.jobTitle = '';
+    user.languages = '';
+    user.facebookLink = '';
+    user.instagramLink = '';
+    user.linkedinLink = '';
+    user.githubLink = '';
+    await user.save();
+    return res.status(200).send(user);
+})
 app.get('/dashboard', authenticate, async function(req, res) {
     try {
         const user = req.rootUser; // Assuming this is how you retrieve the logged-in user
         const userBlogs = await BlogPost.find({ author: user._id });
         var verified = false;
+
         if(user.username === 'hdwarade') {
             verified = true;
         }
@@ -160,6 +184,10 @@ app.get('/dashboard', authenticate, async function(req, res) {
             title: user.username,
             link1: process.env.LINK1,
             link2: process.env.LINK2,
+            dashcss1: process.env.DASHBOARDCSS1,
+            dashcss2: process.env.DASHBOARDCSS2,
+            dashjs1: process.env.DASHBOARDJS1,
+            dashjs2: process.env.DASHBOARDJS2,
             myFirstName: user.firstName,
             myLastName: user.lastName,
             myUsername: user.username,
@@ -176,6 +204,10 @@ app.get('/dashboard', authenticate, async function(req, res) {
         return res.status(500).json({ error: "Internal server error" });
     }
 });
+
+app.get('/someapi', async (req, res) => {
+    return res.status(200).send("This is a response")
+})
 
 app.post('/add-bio', authenticate, async (req, res) => {
     try {
@@ -512,13 +544,22 @@ app.post('/delete-comment/:postId/:commentId', authenticate, async (req, res) =>
 
 app.get('/edit-profile', authenticate, async function(req, res) {
     const user = req.rootUser;
-    return res.status(200).render('settingPage', {user: user});
+    const csslink1 = process.env.SETTINGCSS1;
+    
+    return res.status(200).render('settingPage', {
+        user: user,
+        csslink1,
+        dashcss1: process.env.DASHBOARDCSS1,
+        dashcss2: process.env.DASHBOARDCSS2,
+        dashjs1: process.env.DASHBOARDJS1,
+        dashjs2: process.env.DASHBOARDJS2,  
+    });
 })
 
 app.post('/update-settings', authenticate, async (req, res) => {
     try {
         const user = req.rootUser;
-        const { firstName, lastName, country, email, college, bio } = req.body;
+        const { firstName, lastName, country, email, college, bio, phone, location, jobTitle, languages, facebookLink, instagramLink, githubLink, website, city, zip } = req.body;
 
 
         user.firstName = firstName;
@@ -527,6 +568,17 @@ app.post('/update-settings', authenticate, async (req, res) => {
         user.email = email;
         user.college = college;
         user.bio = bio;
+        user.phone = phone;
+        user.location = location;
+        user.jobTitle = jobTitle;
+        user.languages = languages;
+        user.facebookLink = facebookLink;
+        user.instagramLink = instagramLink;
+        user.githubLink = githubLink;
+        user.website = website;
+        user.city = city;
+        user.zip = zip;
+        
         
         await user.save();
 
